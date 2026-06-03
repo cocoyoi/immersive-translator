@@ -5,7 +5,7 @@ const assert = require('assert');
 const { JSDOM } = require('jsdom');
 
 // Setup DOM environment
-const dom = new JSDOM('<!DOCTYPE html><html><body><p>Hello world</p></body></html>');
+const dom = new JSDOM('<!DOCTYPE html><html><body><p>Hello world</p><p>你好世界</p></body></html>');
 global.document = dom.window.document;
 global.window = dom.window;
 global.Node = dom.window.Node;
@@ -49,6 +49,16 @@ async function runTests() {
     assert(/[a-zA-Z]/.test(text));
   });
   
+  test('detect Korean', () => {
+    const text = '안녕하세요';
+    assert(/[\uac00-\ud7af]/.test(text));
+  });
+  
+  test('detect Russian', () => {
+    const text = 'Привет';
+    assert(/[\u0400-\u04FF]/.test(text));
+  });
+  
   // DOM manipulation tests
   test('text node extraction', () => {
     const p = document.querySelector('p');
@@ -57,8 +67,26 @@ async function runTests() {
   
   test('wrapper element creation', () => {
     const wrapper = document.createElement('span');
-    wrapper.className = 'yayacal-translated-wrapper';
-    assert(wrapper.className === 'yayacal-translated-wrapper');
+    wrapper.className = 'it-bilingual-inline';
+    assert(wrapper.className === 'it-bilingual-inline');
+  });
+  
+  test('block wrapper creation', () => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'it-bilingual-block';
+    assert(wrapper.className === 'it-bilingual-block');
+  });
+  
+  test('pure translation wrapper', () => {
+    const span = document.createElement('span');
+    span.className = 'it-pure-trans';
+    assert(span.className === 'it-pure-trans');
+  });
+  
+  // Language count
+  test('multiple languages present', () => {
+    const ps = document.querySelectorAll('p');
+    assert(ps.length >= 2);
   });
   
   console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);

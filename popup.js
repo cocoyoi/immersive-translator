@@ -1,4 +1,5 @@
-// popup.js - YaYacal Translation Settings Panel
+// popup.js - immersive-translator Settings Panel
+
 const PRESETS = {
   openai: { base: 'https://api.openai.com/v1', model: 'gpt-4o-mini', temp: 0.3 },
   deepseek: { base: 'https://api.deepseek.com/v1', model: 'deepseek-chat', temp: 0.3 },
@@ -9,8 +10,21 @@ const PRESETS = {
 
 const DEFAULT_SYSTEM = "你是一个专业翻译助手。将用户输入的文本翻译成目标语言，保持原文的语气和风格。只输出翻译结果，不添加解释。";
 
+const AI_EXPERTS = [
+  { id: 'general', name: '通用翻译', description: '适合日常翻译和通用文本' },
+  { id: 'tech', name: '技术文档', description: '适合软件、IT、技术文档翻译' },
+  { id: 'medical', name: '医学翻译', description: '适合医学论文、报告翻译' },
+  { id: 'legal', name: '法律翻译', description: '适合合同、法律文件翻译' },
+  { id: 'literary', name: '文学翻译', description: '适合小说、诗歌、散文翻译' },
+  { id: 'academic', name: '学术论文', description: '适合学术论文、研究报告翻译' },
+  { id: 'business', name: '商务翻译', description: '适合商务邮件、提案翻译' },
+  { id: 'subtitles', name: '字幕翻译', description: '适合视频字幕、对话翻译' }
+];
+
 let currentEngines = [];
 let activeEngineId = null;
+let currentGlossary = {};
+let currentExpert = 'general';
 
 function initTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
@@ -36,26 +50,48 @@ function initPresets() {
   });
 }
 
+function initStylePreviews() {
+  document.querySelectorAll('.style-preview').forEach(preview => {
+    preview.addEventListener('click', () => {
+      document.querySelectorAll('.style-preview').forEach(p => p.classList.remove('active'));
+      preview.classList.add('active');
+    });
+  });
+}
+
 async function loadSettings() {
   const data = await chrome.storage.sync.get([
     'enableTranslate', 'bilingualMode', 'selectionTranslate', 'inputTranslate',
     'targetLang', 'fontSize', 'transColor', 'showOriginal', 'hoverTranslate',
-    'autoDetect', 'enableCache', 'maxConcurrent', 'engines', 'activeEngineId'
+    'autoDetect', 'enableCache', 'maxConcurrent', 'engines', 'activeEngineId',
+    'hoverModifier', 'inputTrigger', 'glossary', 'aiExpert', 'transStyle',
+    'pronounceEnabled', 'systemPrompt'
   ]);
   
   document.getElementById('enable-translate').checked = data.enableTranslate || false;
   document.getElementById('bilingual-mode').checked = data.bilingualMode !== false;
   document.getElementById('selection-translate').checked = data.selectionTranslate || false;
   document.getElementById('input-translate').checked = data.inputTranslate || false;
+  document.getElementById('hover-translate').checked = data.hoverTranslate || false;
   document.getElementById('target-lang').value = data.targetLang || 'zh-CN';
   document.getElementById('font-size').value = data.fontSize || 14;
   document.getElementById('trans-color').value = data.transColor || '#667eea';
   document.getElementById('show-original').checked = data.showOriginal !== false;
-  document.getElementById('hover-translate').checked = data.hoverTranslate || false;
   document.getElementById('auto-detect').checked = data.autoDetect !== false;
   document.getElementById('enable-cache').checked = data.enableCache !== false;
   document.getElementById('max-concurrent').value = data.maxConcurrent || 3;
+  document.getElementById('hover-modifier').value = data.hoverModifier || 'ctrl';
+  document.getElementById('input-trigger').value = data.inputTrigger || 'triple-space';
+  document.getElementById('pronounce-enabled').checked = data.pronounceEnabled || false;
+  document.getElementById('system-prompt').value = data.systemPrompt || DEFAULT_SYSTEM;
   
+  // Style
+  const style = data.transStyle || 'bilingual-inline';
+  document.querySelectorAll('.style-preview').forEach(p => {
+    p.classList.toggle('active', p.dataset.style === style);
+  });
+  
+  // Engines
   currentEngines = data.engines || [];
   activeEngineId = data.activeEngineId;
   renderEngineList();
@@ -70,6 +106,14 @@ async function loadSettings() {
       document.getElementById('system-prompt').value = engine.system || DEFAULT_SYSTEM;
     }
   }
+  
+  // Glossary
+  currentGlossary = data.glossary || {};
+  renderGlossary();
+  
+  // Expert
+  currentExpert = data.aiExpert || 'general';
+  renderExperts();
   
   updateStatus();
 }
@@ -121,6 +165,48 @@ function renderEngineList() {
         }
       }
     });
+  });
+}
+
+function renderGlossary() {
+  const list = document.getElementById('glossary-list');
+  list.innerHTML = '';
+  Object.entries(currentGlossary).forEach(([key, val]) => {
+    const row = document.createElement('div');
+    row.className = 'glossary-row';
+    row.innerHTML = `
+      <input type="text" value="${key}" readonly style="background: #1a1a2e; color: #888;">
+      <input type="text" value="${val}" readonly style="background: #1a1a2e; color: #888;">
+      <button class="icon-btn" data-key="${key}">×</button>
+    `;
+    list.appendChild(row);
+  });
+  
+  list.querySelectorAll('.icon-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      delete currentGlossary[btn.dataset.key];
+      await chrome.storage.sync.set({ glossary: currentGlossary });
+      renderGlossary();
+    });
+  });
+}
+
+function renderExperts() {
+  const list = document.getElementById('expert-list');
+  list.innerHTML = '';
+  AI_EXPERTS.forEach(expert => {
+    const card = document.createElement('div');
+    card.className = 'expert-card' + (expert.id === currentExpert ? ' active' : '');
+    card.innerHTML = `
+      <h4>${expert.name}</h4>
+      <p>${expert.description}</p>
+    `;
+    card.addEventListener('click', () => {
+      currentExpert = expert.id;
+      document.querySelectorAll('.expert-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+    });
+    list.appendChild(card);
   });
 }
 
@@ -206,21 +292,53 @@ async function saveEngine() {
 }
 
 async function saveAllSettings() {
+  const styleEl = document.querySelector('.style-preview.active');
+  const transStyle = styleEl ? styleEl.dataset.style : 'bilingual-inline';
+  
+  const expert = AI_EXPERTS.find(e => e.id === currentExpert);
+  
   await chrome.storage.sync.set({
     enableTranslate: document.getElementById('enable-translate').checked,
     bilingualMode: document.getElementById('bilingual-mode').checked,
     selectionTranslate: document.getElementById('selection-translate').checked,
     inputTranslate: document.getElementById('input-translate').checked,
+    hoverTranslate: document.getElementById('hover-translate').checked,
     targetLang: document.getElementById('target-lang').value,
     fontSize: parseInt(document.getElementById('font-size').value),
     transColor: document.getElementById('trans-color').value,
     showOriginal: document.getElementById('show-original').checked,
-    hoverTranslate: document.getElementById('hover-translate').checked,
     autoDetect: document.getElementById('auto-detect').checked,
     enableCache: document.getElementById('enable-cache').checked,
-    maxConcurrent: parseInt(document.getElementById('max-concurrent').value)
+    maxConcurrent: parseInt(document.getElementById('max-concurrent').value),
+    hoverModifier: document.getElementById('hover-modifier').value,
+    inputTrigger: document.getElementById('input-trigger').value,
+    pronounceEnabled: document.getElementById('pronounce-enabled').checked,
+    transStyle,
+    aiExpert: currentExpert,
+    glossary: currentGlossary,
+    systemPrompt: document.getElementById('system-prompt').value.trim()
   });
   alert('设置已保存');
+}
+
+async function addGlossary() {
+  const key = document.getElementById('glossary-key').value.trim();
+  const val = document.getElementById('glossary-val').value.trim();
+  if (!key || !val) return;
+  
+  currentGlossary[key] = val;
+  await chrome.storage.sync.set({ glossary: currentGlossary });
+  document.getElementById('glossary-key').value = '';
+  document.getElementById('glossary-val').value = '';
+  renderGlossary();
+}
+
+async function clearCache() {
+  await chrome.storage.local.set({ translationCache: {} });
+  chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+    if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { action: 'clearCache' });
+  });
+  alert('翻译缓存已清除');
 }
 
 function loadLogs() {
@@ -237,16 +355,19 @@ function loadLogs() {
 function init() {
   initTabs();
   initPresets();
+  initStylePreviews();
   loadSettings();
   loadLogs();
   
   document.getElementById('test-engine').addEventListener('click', testEngine);
   document.getElementById('save-engine').addEventListener('click', saveEngine);
-  document.getElementById('save-settings').addEventListener('click', saveAllSettings);
+  document.getElementById('save-advanced').addEventListener('click', saveAllSettings);
+  document.getElementById('add-glossary').addEventListener('click', addGlossary);
   document.getElementById('clear-logs').addEventListener('click', () => {
     chrome.storage.local.set({ logs: [] });
     loadLogs();
   });
+  document.getElementById('clear-cache').addEventListener('click', clearCache);
 }
 
 document.addEventListener('DOMContentLoaded', init);

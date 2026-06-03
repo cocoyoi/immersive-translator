@@ -1,34 +1,57 @@
-/* content.css - YaYacal Translation Styles */
+/* content.css - immersive-translator styles */
 
-.yayacal-translated-wrapper {
+/* Translated elements */
+.it-bilingual-inline {
   display: inline !important;
-  animation: yayacal-fade-in 0.3s ease;
+  animation: it-fade-in 0.3s ease;
 }
 
-@keyframes yayacal-fade-in {
-  from { opacity: 0; transform: translateY(2px); }
-  to { opacity: 1; transform: translateY(0); }
+.it-bilingual-block {
+  display: block !important;
+  animation: it-fade-in 0.3s ease;
 }
 
-.yayacal-translation {
+.it-pure-trans {
+  display: inline !important;
+  animation: it-fade-in 0.3s ease;
+}
+
+.it-original {
+  font-family: inherit !important;
+}
+
+.it-translation {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif !important;
   line-height: 1.5 !important;
 }
 
-.yayacal-original {
-  font-family: inherit !important;
+.it-hover-translation {
+  animation: it-fade-in 0.2s ease;
 }
 
-#yayacal-popup {
+/* Popup */
+#it-popup {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   line-height: 1.5 !important;
 }
 
-#yayacal-popup::-webkit-scrollbar {
+#it-popup::-webkit-scrollbar {
   width: 6px;
 }
 
-#yayacal-popup::-webkit-scrollbar-thumb {
+#it-popup::-webkit-scrollbar-thumb {
   background: #667eea;
   border-radius: 3px;
+}
+
+/* Animations */
+@keyframes it-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Input translation feedback */
+input[data-space-count],
+textarea[data-space-count] {
+  transition: background 0.3s;
 }

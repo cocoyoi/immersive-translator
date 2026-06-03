@@ -1,10 +1,11 @@
+
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { width: 380px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; }
+    body { width: 400px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; }
     .header { padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: center; }
     .header h1 { font-size: 18px; font-weight: 600; }
     .header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
@@ -78,6 +79,19 @@
     .log-time { color: #888; }
     .log-info { color: #17a2b8; }
     .log-error { color: #dc3545; }
+    .glossary-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .glossary-row input { flex: 1; }
+    .glossary-row .icon-btn { padding: 6px 10px; }
+    .expert-card { padding: 10px; background: #16213e; border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.3s; }
+    .expert-card:hover { border-color: #667eea; }
+    .expert-card.active { border-color: #667eea; background: rgba(102,126,234,0.1); }
+    .expert-card h4 { font-size: 13px; margin-bottom: 4px; }
+    .expert-card p { font-size: 11px; color: #888; }
+    .style-preview { padding: 8px; background: #16213e; border-radius: 6px; margin-top: 6px; font-size: 12px; border: 1px solid #444; }
+    .style-preview.active { border-color: #667eea; }
+    .lang-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; }
+    .lang-item { padding: 6px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; background: #16213e; }
+    .lang-item:hover, .lang-item.active { background: #667eea; }
   </style>
 </head>
 <body>
@@ -89,7 +103,7 @@
   <div class="tabs">
     <div class="tab active" data-panel="translate">翻译</div>
     <div class="tab" data-panel="engines">引擎</div>
-    <div class="tab" data-panel="settings">设置</div>
+    <div class="tab" data-panel="advanced">高级</div>
     <div class="tab" data-panel="logs">日志</div>
   </div>
   
@@ -122,6 +136,31 @@
         <span class="toggle-slider"></span>
       </label>
     </div>
+    <div class="toggle-row">
+      <span>鼠标悬停翻译</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="hover-translate">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>翻译样式</label>
+      <div style="display: flex; gap: 8px;">
+        <div class="style-preview active" data-style="bilingual-inline" style="flex: 1;">
+          <div style="font-size: 10px; color: #888; margin-bottom: 2px;">行内双语</div>
+          <div>Hello <span style="color:#667eea">你好</span></div>
+        </div>
+        <div class="style-preview" data-style="bilingual-block" style="flex: 1;">
+          <div style="font-size: 10px; color: #888; margin-bottom: 2px;">段落双语</div>
+          <div>Hello</div>
+          <div style="color:#667eea">你好</div>
+        </div>
+        <div class="style-preview" data-style="pure-translation" style="flex: 1;">
+          <div style="font-size: 10px; color: #888; margin-bottom: 2px;">纯译文</div>
+          <div style="color:#667eea">你好</div>
+        </div>
+      </div>
+    </div>
     <div class="form-group">
       <label>目标语言</label>
       <select id="target-lang">
@@ -134,6 +173,12 @@
         <option value="de">Deutsch</option>
         <option value="es">Español</option>
         <option value="ru">Русский</option>
+        <option value="pt">Português</option>
+        <option value="it">Italiano</option>
+        <option value="ar">العربية</option>
+        <option value="hi">हिन्दी</option>
+        <option value="th">ไทย</option>
+        <option value="vi">Tiếng Việt</option>
       </select>
     </div>
     <div class="shortcut-hint">快捷键: Alt+T 翻译当前页 | Alt+S 划词翻译</div>
@@ -177,8 +222,19 @@
     <div class="engine-list" id="engine-list"></div>
   </div>
   
-  <div id="settings-panel" class="panel">
-    <div class="section-title">显示设置</div>
+  <div id="advanced-panel" class="panel">
+    <div class="section-title">术语库</div>
+    <div id="glossary-list"></div>
+    <div class="glossary-row" style="margin-top: 8px;">
+      <input type="text" id="glossary-key" placeholder="原文术语">
+      <input type="text" id="glossary-val" placeholder="翻译">
+      <button class="icon-btn" id="add-glossary">+</button>
+    </div>
+    
+    <div class="section-title" style="margin-top: 16px;">AI 翻译专家</div>
+    <div id="expert-list"></div>
+    
+    <div class="section-title" style="margin-top: 16px;">显示设置</div>
     <div class="form-group">
       <label>翻译字体大小</label>
       <input type="range" id="font-size" min="12" max="20" value="14" style="width: 100%;">
@@ -195,14 +251,6 @@
       </label>
     </div>
     <div class="toggle-row">
-      <span>悬停翻译</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="hover-translate">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="section-title" style="margin-top: 16px;">高级</div>
-    <div class="toggle-row">
       <span>自动检测语言</span>
       <label class="toggle-switch">
         <input type="checkbox" id="auto-detect" checked>
@@ -216,17 +264,40 @@
         <span class="toggle-slider"></span>
       </label>
     </div>
+    <div class="toggle-row">
+      <span>发音功能</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="pronounce-enabled">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
     <div class="form-group">
       <label>并行请求数</label>
       <input type="number" id="max-concurrent" min="1" max="10" value="3">
     </div>
-    <button class="btn btn-primary" id="save-settings" style="margin-top: 12px;">保存设置</button>
+    <div class="form-group">
+      <label>悬停快捷键</label>
+      <select id="hover-modifier">
+        <option value="ctrl">Ctrl</option>
+        <option value="alt">Alt</option>
+        <option value="shift">Shift</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>输入框触发方式</label>
+      <select id="input-trigger">
+        <option value="triple-space">连按 3 次空格</option>
+        <option value="double-space">连按 2 次空格</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" id="save-advanced" style="margin-top: 12px;">保存高级设置</button>
   </div>
   
   <div id="logs-panel" class="panel">
     <div class="section-title">运行日志</div>
     <div class="logs-area" id="logs-area"></div>
     <button class="btn btn-secondary" id="clear-logs" style="margin-top: 10px;">清除日志</button>
+    <button class="btn btn-secondary" id="clear-cache" style="margin-top: 8px;">清除翻译缓存</button>
   </div>
   
   <div class="status-bar">
