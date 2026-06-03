@@ -8,10 +8,11 @@
   let translationCache = new Map();
   let observer = null;
   let isTranslating = false;
-  let hoveredParagraph = null;
+  let hoverModifierDown = false;
   let hoveredTransNode = null;
+  let translationEnabled = false;
 
-  const BLOCK_TAGS = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'BUTTON', 'SVG', 'PATH', 'IFRAME', 'IMG', 'VIDEO', 'CANVAS', 'SELECT', 'TEXTAREA']);
+  const BLOCK_TAGS = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'TEXTAREA', 'INPUT', 'BUTTON', 'SVG', 'PATH', 'IFRAME', 'IMG', 'VIDEO', 'CANVAS', 'SELECT', 'NOSCRIPT']);
   const MIN_TEXT_LENGTH = 3;
   const MAX_TEXT_LENGTH = 5000;
   const MAX_CACHE_SIZE = 5000;
@@ -22,7 +23,7 @@
       'enableTranslate', 'bilingualMode', 'selectionTranslate', 'inputTranslate',
       'targetLang', 'fontSize', 'transColor', 'showOriginal', 'hoverTranslate',
       'autoDetect', 'enableCache', 'maxConcurrent', 'engines', 'activeEngineId',
-      'hoverModifier', 'inputTrigger', 'glossary', 'aiExperts',
+      'hoverModifier', 'inputTrigger', 'glossary', 'aiExpert',
       'transStyle', 'lineSpacing', 'showProgress', 'pronounceEnabled'
     ]);
     settings = { ...{
@@ -32,14 +33,15 @@
       fontSize: 14,
       transColor: '#667eea',
       showOriginal: true,
-      hoverModifier: 'ctrl',  // ctrl | alt | shift
-      inputTrigger: 'triple-space',  // triple-space | double-space
-      transStyle: 'bilingual-inline',  // bilingual-inline | bilingual-block | pure-translation
+      hoverModifier: 'ctrl',
+      inputTrigger: 'triple-space',
+      transStyle: 'bilingual-inline',
       lineSpacing: 1.5,
       showProgress: true,
       pronounceEnabled: false,
       maxConcurrent: 3
     }, ...data };
+    translationEnabled = settings.enableTranslate;
     return settings;
   }
 
@@ -64,18 +66,25 @@
   }
 
   function buildPrompt(text, targetLang, glossary) {
-    let system = settings.systemPrompt || 'You are a professional translator. Translate accurately while preserving the original tone and style. Output only the translation without explanations.';
+    let system = 'You are a professional translator. Translate accurately while preserving the original tone and style. Output only the translation without explanations.';
     
-    // Add glossary terms
     if (glossary && Object.keys(glossary).length > 0) {
       const terms = Object.entries(glossary).map(([k, v]) => `"${k}" -> "${v}"`).join('\n');
       system += '\n\nUse the following glossary terms:\n' + terms;
     }
     
-    // Add expert context
-    const expert = settings.aiExpert;
-    if (expert) {
-      system += `\n\nYou are a ${expert.name || 'translation expert'}. ${expert.description || ''}`;
+    const expertMap = {
+      'tech': 'You are a technical translator. Use precise technical terminology.',
+      'medical': 'You are a medical translator. Use accurate medical terminology.',
+      'legal': 'You are a legal translator. Use precise legal terminology.',
+      'literary': 'You are a literary translator. Preserve metaphors and poetic elements.',
+      'academic': 'You are an academic translator. Maintain formal tone and citations.',
+      'business': 'You are a business translator. Use professional business terminology.',
+      'subtitles': 'You are a subtitle translator. Keep translations concise for timing.'
+    };
+    
+    if (settings.aiExpert && expertMap[settings.aiExpert]) {
+      system += '\n\n' + expertMap[settings.aiExpert];
     }
     
     return { system, user: `Translate the following text to ${targetLang}:\n\n${text}` };
@@ -91,11 +100,15 @@
     }
 
     const engine = await getActiveEngine();
-    if (!engine) throw new Error('No active translation engine');
+    if (!engine) throw new Error('未配置翻译引擎，请先在设置中配置 API');
+    
+    if (!engine.base || !engine.key || !engine.model) {
+      throw new Error('引擎配置不完整，请检查 API Base URL、API Key 和模型名称');
+    }
 
     const prompts = buildPrompt(text, targetLang, settings.glossary);
     
-    const url = `${engine.base}/chat/completions`;
+    const url = engine.base + '/chat/completions';
     const body = {
       model: engine.model,
       messages: [
@@ -110,14 +123,14 @@
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${engine.key}`
+        'Authorization': 'Bearer ' + engine.key
       },
       body: JSON.stringify(body)
     });
 
     if (!resp.ok) {
       const err = await resp.text();
-      throw new Error(`API error ${resp.status}: ${err}`);
+      throw new Error('API 错误 ' + resp.status + ': ' + err);
     }
 
     const data = await resp.json();
@@ -144,25 +157,25 @@
       const span = document.createElement('span');
       span.className = 'it-pure-trans';
       span.textContent = translated;
-      span.style.cssText = `font-size: ${fontSize}; line-height: ${lineHeight};`;
+      span.style.cssText = 'font-size: ' + fontSize + '; line-height: ' + lineHeight + ';';
       return span;
     }
     
     if (style === 'bilingual-block') {
       const wrapper = document.createElement('div');
       wrapper.className = 'it-bilingual-block';
-      wrapper.style.cssText = `display: block; margin: 4px 0; padding: 8px; border-radius: 6px; background: rgba(102,126,234,0.08);`;
+      wrapper.style.cssText = 'display: block; margin: 4px 0; padding: 8px 12px; border-radius: 6px; background: rgba(102,126,234,0.08); border: 1px solid rgba(102,126,234,0.15);';
       
       const orig = document.createElement('div');
       orig.className = 'it-original';
       orig.textContent = original;
-      orig.style.cssText = `font-size: ${fontSize}; opacity: 0.7; margin-bottom: 4px;`;
+      orig.style.cssText = 'font-size: ' + fontSize + '; opacity: 0.7; margin-bottom: 4px;';
       wrapper.appendChild(orig);
       
       const trans = document.createElement('div');
       trans.className = 'it-translation';
       trans.textContent = translated;
-      trans.style.cssText = `font-size: ${fontSize}; color: ${color}; line-height: ${lineHeight};`;
+      trans.style.cssText = 'font-size: ' + fontSize + '; color: ' + color + '; line-height: ' + lineHeight + ';';
       wrapper.appendChild(trans);
       
       return wrapper;
@@ -177,22 +190,14 @@
       const orig = document.createElement('span');
       orig.className = 'it-original';
       orig.textContent = original;
-      orig.style.cssText = `display: inline; opacity: 0.7; font-size: 0.95em;`;
+      orig.style.cssText = 'display: inline; opacity: 0.7; font-size: 0.95em;';
       wrapper.appendChild(orig);
     }
 
     const trans = document.createElement('span');
     trans.className = 'it-translation';
     trans.textContent = translated;
-    trans.style.cssText = `
-      display: inline;
-      color: ${color};
-      font-size: ${fontSize};
-      line-height: ${lineHeight};
-      border-left: 2px solid ${color};
-      padding-left: 6px;
-      margin-left: 4px;
-    `;
+    trans.style.cssText = 'display: inline; color: ' + color + '; font-size: ' + fontSize + '; line-height: ' + lineHeight + '; border-left: 2px solid ' + color + '; padding-left: 6px; margin-left: 4px;';
     wrapper.appendChild(trans);
 
     // Toggle original on click
@@ -268,27 +273,36 @@
   async function translatePage() {
     if (isTranslating) return;
     isTranslating = true;
+    
+    showToast('正在翻译页面...');
 
     await loadSettings();
-    if (!settings.enableTranslate) {
-      isTranslating = false;
-      return;
-    }
-
     const nodes = getTextBlocks(document.body);
     if (nodes.length === 0) {
       isTranslating = false;
+      showToast('页面上没有可翻译的文本');
       return;
     }
 
     await translateBatch(nodes);
     isTranslating = false;
+    showToast('翻译完成！' + nodes.length + ' 个文本块已翻译');
+    startObserver();
+  }
+
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.id = 'it-toast';
+    toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 2147483647; background: #1a1a2e; color: #eee; border: 1px solid #667eea; border-radius: 8px; padding: 12px 20px; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; box-shadow: 0 4px 20px rgba(0,0,0,0.5); max-width: 300px; word-wrap: break-word;';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
   }
 
   function startObserver() {
     if (observer) observer.disconnect();
     observer = new MutationObserver(mutations => {
-      if (!settings.enableTranslate || isTranslating) return;
+      if (!translationEnabled || isTranslating) return;
       const newNodes = [];
       mutations.forEach(mutation => {
         mutation.addedNodes.forEach(node => {
@@ -318,38 +332,15 @@
 
     const popup = document.createElement('div');
     popup.id = 'it-popup';
-    popup.style.cssText = `
-      position: fixed; z-index: 2147483647; left: ${Math.min(x, window.innerWidth - 420)}px; top: ${y}px;
-      background: #1a1a2e; color: #eee; border: 1px solid #667eea;
-      border-radius: 8px; padding: 12px; max-width: 400px; min-width: 200px;
-      font-size: 14px; line-height: 1.5;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: auto;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-    popup.innerHTML = `
-      <div style="text-align: center; padding: 10px; color: #667eea;">翻译中...</div>
-    `;
+    popup.style.cssText = 'position: fixed; z-index: 2147483647; left: ' + Math.min(x, window.innerWidth - 420) + 'px; top: ' + y + 'px; background: #1a1a2e; color: #eee; border: 1px solid #667eea; border-radius: 12px; padding: 16px; max-width: 400px; min-width: 200px; font-size: 14px; line-height: 1.5; box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: auto; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+    popup.innerHTML = '<div style="text-align: center; padding: 10px; color: #667eea;">翻译中...</div>';
     document.body.appendChild(popup);
 
     translateText(text, settings.targetLang || 'zh-CN')
       .then(translated => {
-        const pronounceBtn = showPronounce ? `
-          <button id="it-pronounce-btn" style="background: transparent; border: 1px solid #667eea; color: #667eea; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 12px; margin-left: 8px;">🔊 发音</button>
-        ` : '';
+        const pronounceBtn = showPronounce ? '<button id="it-pronounce-btn" style="background: transparent; border: 1px solid #667eea; color: #667eea; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 12px; margin-left: 8px;">🔊 发音</button>' : '';
         
-        popup.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="color: #667eea; font-size: 12px; font-weight: 500;">原文</span>
-            <button id="it-copy-btn" style="background: transparent; border: 1px solid #444; color: #aaa; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 11px;">复制</button>
-          </div>
-          <div id="it-popup-original" style="margin-bottom: 10px; opacity: 0.8; font-size: 13px;" data-text="${escapeHtml(text)}">${escapeHtml(text)}</div>
-          <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
-          <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <span style="color: #667eea; font-size: 12px; font-weight: 500;">翻译</span>
-            ${pronounceBtn}
-          </div>
-          <div id="it-popup-translated" style="font-size: 14px; color: #fff;" data-text="${escapeHtml(translated)}">${escapeHtml(translated)}</div>
-        `;
+        popup.innerHTML = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><span style="color: #667eea; font-size: 12px; font-weight: 500;">原文</span><button id="it-copy-btn" style="background: transparent; border: 1px solid #444; color: #aaa; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 11px;">复制</button></div><div id="it-popup-original" style="margin-bottom: 10px; opacity: 0.8; font-size: 13px;" data-text="' + escapeHtml(text) + '">' + escapeHtml(text) + '</div><div style="border-top: 1px solid #333; margin: 8px 0;"></div><div style="display: flex; align-items: center; margin-bottom: 8px;"><span style="color: #667eea; font-size: 12px; font-weight: 500;">翻译</span>' + pronounceBtn + '</div><div id="it-popup-translated" style="font-size: 14px; color: #fff;" data-text="' + escapeHtml(translated) + '">' + escapeHtml(translated) + '</div>';
         
         popup.querySelector('#it-copy-btn')?.addEventListener('click', () => {
           navigator.clipboard.writeText(translated).then(() => {
@@ -366,7 +357,7 @@
         });
       })
       .catch(e => {
-        popup.innerHTML = `<div style="color: #dc3545; text-align: center; padding: 10px;">翻译失败: ${escapeHtml(e.message)}</div>`;
+        popup.innerHTML = '<div style="color: #dc3545; text-align: center; padding: 10px;">翻译失败: ' + escapeHtml(e.message) + '</div>';
       });
 
     setTimeout(() => {
@@ -393,21 +384,20 @@
     showPopup(selection, rect.left, rect.bottom + 10, settings.pronounceEnabled);
   });
 
-  // ==== Hover Translation (Ctrl/Alt/Shift + hover) ====
+  // ==== Hover Translation ====
   document.addEventListener('keydown', e => {
     const mod = settings.hoverModifier || 'ctrl';
-    if (mod === 'ctrl' && e.ctrlKey) hoveredParagraph = true;
-    if (mod === 'alt' && e.altKey) hoveredParagraph = true;
-    if (mod === 'shift' && e.shiftKey) hoveredParagraph = true;
+    if (mod === 'ctrl' && e.ctrlKey) hoverModifierDown = true;
+    if (mod === 'alt' && e.altKey) hoverModifierDown = true;
+    if (mod === 'shift' && e.shiftKey) hoverModifierDown = true;
   });
   
   document.addEventListener('keyup', e => {
     const mod = settings.hoverModifier || 'ctrl';
-    if (mod === 'ctrl' && !e.ctrlKey) hoveredParagraph = false;
-    if (mod === 'alt' && !e.altKey) hoveredParagraph = false;
-    if (mod === 'shift' && !e.shiftKey) hoveredParagraph = false;
+    if (mod === 'ctrl' && !e.ctrlKey) hoverModifierDown = false;
+    if (mod === 'alt' && !e.altKey) hoverModifierDown = false;
+    if (mod === 'shift' && !e.shiftKey) hoverModifierDown = false;
     
-    // Remove hovered translation when key released
     if (hoveredTransNode && hoveredTransNode.parentElement) {
       hoveredTransNode.remove();
       hoveredTransNode = null;
@@ -415,14 +405,13 @@
   });
 
   document.addEventListener('mouseover', async e => {
-    if (!hoveredParagraph) return;
+    if (!settings.hoverTranslate || !hoverModifierDown) return;
     const target = e.target;
-    if (target.closest('.it-bilingual-inline') || target.closest('.it-bilingual-block') || target.closest('#it-popup')) return;
+    if (target.closest('.it-bilingual-inline') || target.closest('.it-bilingual-block') || target.closest('#it-popup') || target.closest('.it-hover-translation')) return;
     
     const text = target.textContent?.trim();
     if (!text || text.length < 5 || text.length > 500) return;
     
-    // Find the closest paragraph or block
     const block = target.closest('p, div, li, td, h1, h2, h3, h4, h5, h6, span');
     if (!block || block === document.body) return;
     
@@ -431,20 +420,13 @@
     
     try {
       const translated = await translateText(blockText, settings.targetLang || 'zh-CN');
-      
-      // Remove previous hover translation
       if (hoveredTransNode && hoveredTransNode.parentElement) {
         hoveredTransNode.remove();
       }
       
       const transNode = document.createElement('div');
       transNode.className = 'it-hover-translation';
-      transNode.style.cssText = `
-        position: relative; display: block; margin: 4px 0; padding: 8px 12px;
-        background: rgba(102,126,234,0.1); border-left: 3px solid #667eea;
-        border-radius: 0 4px 4px 0; font-size: 14px; color: #eee;
-        animation: it-fade-in 0.2s ease;
-      `;
+      transNode.style.cssText = 'position: relative; display: block; margin: 4px 0; padding: 8px 12px; background: rgba(102,126,234,0.1); border-left: 3px solid #667eea; border-radius: 0 4px 4px 0; font-size: 14px; color: #eee; animation: it-fade-in 0.2s ease;';
       transNode.textContent = translated;
       
       block.appendChild(transNode);
@@ -455,19 +437,18 @@
   });
 
   document.addEventListener('mouseout', () => {
-    if (hoveredTransNode && !hoveredParagraph) {
+    if (hoveredTransNode && !hoverModifierDown) {
       hoveredTransNode.remove();
       hoveredTransNode = null;
     }
   });
 
-  // ==== Input Translation (Triple Space / Double Space) ====
+  // ==== Input Translation ====
   document.addEventListener('keydown', async e => {
     if (!settings.inputTranslate) return;
     const target = e.target;
     if (target.tagName !== 'TEXTAREA' && target.tagName !== 'INPUT') return;
     
-    // Track consecutive spaces
     if (e.key === ' ' || e.code === 'Space') {
       let count = parseInt(target.dataset.spaceCount || '0', 10);
       count++;
@@ -486,19 +467,14 @@
         try {
           const translated = await translateText(text, settings.targetLang || 'zh-CN');
           target.value = translated;
-          
-          // Visual feedback
           target.style.transition = 'background 0.3s';
           target.style.background = 'rgba(102,126,234,0.15)';
-          setTimeout(() => {
-            target.style.background = '';
-          }, 500);
+          setTimeout(() => { target.style.background = ''; }, 500);
         } catch (err) {
           console.error('[immersive-translator] Input translation failed:', err);
         }
       }
     } else {
-      // Reset count on non-space key
       target.dataset.spaceCount = '0';
     }
   });
@@ -507,7 +483,7 @@
   document.addEventListener('keydown', e => {
     if (e.altKey && e.key === 't') {
       e.preventDefault();
-      translatePage();
+      loadSettings().then(() => translatePage());
     }
     if (e.altKey && e.key === 's') {
       e.preventDefault();
@@ -522,7 +498,9 @@
   // ==== Message Handling ====
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'translate') {
-      translatePage().then(() => sendResponse({ success: true })).catch(e => sendResponse({ success: false, error: e.message }));
+      loadSettings().then(() => {
+        translatePage().then(() => sendResponse({ success: true })).catch(e => sendResponse({ success: false, error: e.message }));
+      });
       return true;
     }
     if (request.action === 'getStatus') {
@@ -539,7 +517,7 @@
   // ==== Initialize ====
   async function init() {
     await loadSettings();
-    if (settings.enableTranslate) {
+    if (translationEnabled) {
       translatePage();
       startObserver();
     }

@@ -1,314 +1,925 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>immersive-translator</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { width: 400px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; }
-    .header { padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: center; }
-    .header h1 { font-size: 18px; font-weight: 600; }
-    .header p { font-size: 12px; opacity: 0.8; margin-top: 4px; }
-    .tabs { display: flex; border-bottom: 1px solid #333; }
-    .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 13px; transition: all 0.3s; border-bottom: 2px solid transparent; }
-    .tab.active { border-bottom-color: #667eea; color: #667eea; }
-    .tab:hover { background: rgba(102,126,234,0.1); }
-    .panel { display: none; padding: 16px; max-height: 500px; overflow-y: auto; }
-    .panel.active { display: block; }
-    .form-group { margin-bottom: 14px; }
-    .form-group label { display: block; font-size: 12px; margin-bottom: 6px; color: #aaa; }
-    .form-group input, .form-group select, .form-group textarea {
-      width: 100%; padding: 10px 12px; border: 1px solid #444; border-radius: 8px;
-      background: #16213e; color: #eee; font-size: 13px; outline: none; transition: border 0.3s;
+    
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --bg-hover: #334155;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --success: #22c55e;
+      --error: #ef4444;
+      --warning: #f59e0b;
     }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #667eea; }
-    .form-group textarea { resize: vertical; min-height: 60px; }
-    .preset-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .preset-tag {
-      padding: 4px 10px; border-radius: 12px; font-size: 11px; cursor: pointer;
-      background: #16213e; border: 1px solid #444; transition: all 0.3s;
+    
+    body {
+      width: 420px;
+      min-height: 560px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow: hidden;
     }
-    .preset-tag:hover, .preset-tag.active { background: #667eea; border-color: #667eea; }
+    
+    /* Header */
+    .header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .header-brand h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    
+    .header-brand .version {
+      font-size: 10px;
+      opacity: 0.7;
+      background: rgba(255,255,255,0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.8);
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    .status-dot.error {
+      background: var(--error);
+      box-shadow: 0 0 8px var(--error);
+      animation: none;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 4px;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 10px 4px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    
+    .tab:hover {
+      color: var(--text);
+      background: var(--bg-hover);
+    }
+    
+    .tab.active {
+      color: var(--primary-light);
+      border-bottom-color: var(--primary-light);
+    }
+    
+    /* Panels */
+    .panel {
+      display: none;
+      padding: 16px 20px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    
+    .panel.active {
+      display: block;
+    }
+    
+    .panel::-webkit-scrollbar { width: 4px; }
+    .panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+    
+    /* Section */
+    .section {
+      margin-bottom: 16px;
+    }
+    
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    
+    /* Row */
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    
+    .row-label {
+      font-size: 13px;
+      color: var(--text);
+    }
+    
+    .row-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    
+    /* Toggle */
+    .toggle {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      background: var(--border);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .toggle input { display: none; }
+    
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    
+    .toggle:has(input:checked) {
+      background: var(--primary);
+    }
+    
+    .toggle:has(input:checked)::after {
+      transform: translateX(18px);
+    }
+    
+    /* Select */
+    select {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+      min-width: 120px;
+    }
+    
+    select:focus {
+      border-color: var(--primary-light);
+    }
+    
+    /* Button */
     .btn {
-      width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer;
-      font-size: 14px; font-weight: 500; transition: all 0.3s;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
-    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-secondary { background: #16213e; color: #eee; border: 1px solid #444; }
-    .btn-secondary:hover { background: #1f2b47; }
-    .status-bar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 16px; background: #0f0f23; border-top: 1px solid #333; font-size: 12px;
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
     }
-    .status-indicator { display: flex; align-items: center; gap: 6px; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #28a745; }
-    .status-dot.error { background: #dc3545; }
-    .status-dot.warn { background: #ffc107; }
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .toggle-switch { position: relative; width: 44px; height: 24px; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider {
-      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-      background: #444; border-radius: 24px; transition: 0.3s;
+    
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
-    .toggle-slider:before {
-      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
-      background: #fff; border-radius: 50%; transition: 0.3s;
+    
+    .btn-secondary {
+      background: var(--bg-hover);
+      color: var(--text);
+      border: 1px solid var(--border);
     }
-    .toggle-switch input:checked + .toggle-slider { background: #667eea; }
-    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
-    .engine-list { margin-top: 10px; }
-    .engine-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px; background: #16213e; border-radius: 8px; margin-bottom: 8px;
+    
+    .btn-secondary:hover {
+      background: var(--border);
     }
-    .engine-info { flex: 1; }
-    .engine-name { font-size: 13px; font-weight: 500; }
-    .engine-url { font-size: 11px; color: #888; margin-top: 2px; }
-    .engine-actions { display: flex; gap: 6px; }
-    .icon-btn { padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; border: 1px solid #444; background: transparent; color: #eee; }
-    .icon-btn:hover { background: rgba(102,126,234,0.2); }
-    .test-result { margin-top: 10px; padding: 10px; border-radius: 6px; font-size: 12px; display: none; }
-    .test-result.success { background: rgba(40,167,69,0.2); color: #28a745; display: block; }
-    .test-result.error { background: rgba(220,53,69,0.2); color: #dc3545; display: block; }
-    .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #667eea; }
-    .shortcut-hint { font-size: 11px; color: #888; margin-top: 8px; }
-    .logs-area { background: #0f0f23; border-radius: 8px; padding: 10px; font-size: 11px; max-height: 150px; overflow-y: auto; font-family: monospace; }
-    .log-entry { margin-bottom: 4px; }
-    .log-time { color: #888; }
-    .log-info { color: #17a2b8; }
-    .log-error { color: #dc3545; }
-    .glossary-row { display: flex; gap: 8px; margin-bottom: 8px; }
-    .glossary-row input { flex: 1; }
-    .glossary-row .icon-btn { padding: 6px 10px; }
-    .expert-card { padding: 10px; background: #16213e; border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.3s; }
-    .expert-card:hover { border-color: #667eea; }
-    .expert-card.active { border-color: #667eea; background: rgba(102,126,234,0.1); }
-    .expert-card h4 { font-size: 13px; margin-bottom: 4px; }
-    .expert-card p { font-size: 11px; color: #888; }
-    .style-preview { padding: 8px; background: #16213e; border-radius: 6px; margin-top: 6px; font-size: 12px; border: 1px solid #444; }
-    .style-preview.active { border-color: #667eea; }
-    .lang-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; }
-    .lang-item { padding: 6px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; background: #16213e; }
-    .lang-item:hover, .lang-item.active { background: #667eea; }
+    
+    .btn-danger {
+      background: var(--error);
+      color: #fff;
+    }
+    
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 11px;
+    }
+    
+    /* Input */
+    input[type="text"], input[type="password"], input[type="number"] {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 12px;
+      outline: none;
+      width: 100%;
+    }
+    
+    input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+      border-color: var(--primary-light);
+    }
+    
+    input[type="color"] {
+      width: 36px;
+      height: 24px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary);
+    }
+    
+    /* Engine Card */
+    .engine-card {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+    
+    .engine-card:hover {
+      border-color: var(--primary-light);
+    }
+    
+    .engine-card.active {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.1);
+    }
+    
+    .engine-info h4 {
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    
+    .engine-info p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    .engine-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    /* Style Preview */
+    .style-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .style-card {
+      background: var(--bg-hover);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 11px;
+    }
+    
+    .style-card:hover {
+      border-color: var(--primary-light);
+    }
+    
+    .style-card.active {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.1);
+    }
+    
+    .style-card .preview {
+      font-size: 10px;
+      margin-top: 6px;
+      opacity: 0.7;
+      line-height: 1.3;
+    }
+    
+    /* Glossary */
+    .glossary-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    
+    .glossary-row input {
+      flex: 1;
+    }
+    
+    .glossary-row button {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: var(--error);
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Expert Grid */
+    .expert-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    
+    .expert-card {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    
+    .expert-card:hover {
+      border-color: var(--primary-light);
+    }
+    
+    .expert-card.active {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.1);
+    }
+    
+    .expert-card h4 {
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    
+    .expert-card p {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    
+    /* Test Result */
+    .test-result {
+      display: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    
+    .test-result.success {
+      display: block;
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+    
+    .test-result.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    
+    /* Footer */
+    .footer {
+      padding: 10px 20px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    
+    .footer a {
+      color: var(--primary-light);
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Quick Actions */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .quick-action {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: var(--text);
+    }
+    
+    .quick-action:hover {
+      border-color: var(--primary-light);
+      background: rgba(99, 102, 241, 0.08);
+    }
+    
+    .quick-action .icon {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    
+    .quick-action .label {
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    /* Logs */
+    .logs-area {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      line-height: 1.6;
+    }
+    
+    .log-entry {
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    
+    .log-time { color: var(--text-muted); margin-right: 6px; }
+    .log-info { color: var(--primary-light); }
+    .log-error { color: var(--error); }
+    .log-warn { color: var(--warning); }
+    
+    /* Range Value */
+    .range-value {
+      font-size: 11px;
+      color: var(--primary-light);
+      font-weight: 600;
+      min-width: 24px;
+      text-align: right;
+    }
+    
+    /* Preset Tags */
+    .preset-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    
+    .preset-tag {
+      padding: 4px 10px;
+      border-radius: 4px;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .preset-tag:hover {
+      border-color: var(--primary-light);
+      color: var(--text);
+    }
+    
+    .preset-tag.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    
+    /* Modal for detailed settings */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    .modal {
+      background: var(--bg-card);
+      border-radius: 12px;
+      width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .modal-header h3 {
+      font-size: 16px;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 20px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>🌙 immersive-translator</h1>
-    <p>沉浸式翻译</p>
-  </div>
-  
-  <div class="tabs">
-    <div class="tab active" data-panel="translate">翻译</div>
-    <div class="tab" data-panel="engines">引擎</div>
-    <div class="tab" data-panel="advanced">高级</div>
-    <div class="tab" data-panel="logs">日志</div>
-  </div>
-  
-  <div id="translate-panel" class="panel active">
-    <div class="toggle-row">
-      <span>启用网页翻译</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="enable-translate">
-        <span class="toggle-slider"></span>
-      </label>
+    <div class="header-brand">
+      <h1>immersive-translator</h1>
+      <span class="version">v1.0</span>
     </div>
-    <div class="toggle-row">
-      <span>双语对照模式</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="bilingual-mode" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="toggle-row">
-      <span>划词翻译</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="selection-translate">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="toggle-row">
-      <span>输入框翻译</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="input-translate">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="toggle-row">
-      <span>鼠标悬停翻译</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="hover-translate">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="form-group">
-      <label>翻译样式</label>
-      <div style="display: flex; gap: 8px;">
-        <div class="style-preview active" data-style="bilingual-inline" style="flex: 1;">
-          <div style="font-size: 10px; color: #888; margin-bottom: 2px;">行内双语</div>
-          <div>Hello <span style="color:#667eea">你好</span></div>
-        </div>
-        <div class="style-preview" data-style="bilingual-block" style="flex: 1;">
-          <div style="font-size: 10px; color: #888; margin-bottom: 2px;">段落双语</div>
-          <div>Hello</div>
-          <div style="color:#667eea">你好</div>
-        </div>
-        <div class="style-preview" data-style="pure-translation" style="flex: 1;">
-          <div style="font-size: 10px; color: #888; margin-bottom: 2px;">纯译文</div>
-          <div style="color:#667eea">你好</div>
-        </div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label>目标语言</label>
-      <select id="target-lang">
-        <option value="zh-CN">简体中文</option>
-        <option value="zh-TW">繁体中文</option>
-        <option value="en">English</option>
-        <option value="ja">日本語</option>
-        <option value="ko">한국어</option>
-        <option value="fr">Français</option>
-        <option value="de">Deutsch</option>
-        <option value="es">Español</option>
-        <option value="ru">Русский</option>
-        <option value="pt">Português</option>
-        <option value="it">Italiano</option>
-        <option value="ar">العربية</option>
-        <option value="hi">हिन्दी</option>
-        <option value="th">ไทย</option>
-        <option value="vi">Tiếng Việt</option>
-      </select>
-    </div>
-    <div class="shortcut-hint">
-      快捷键: Alt+T 翻译当前页 | Alt+S 划词翻译
-      <br><a href="pdf-viewer.html" target="_blank" style="color: #667eea;">📄 PDF 翻译</a> | <a href="epub-viewer.html" target="_blank" style="color: #667eea;">📖 ePub 翻译</a> | <a href="img-viewer.html" target="_blank" style="color: #667eea;">🖼️ 图片翻译</a>
-    </div>
-  </div>
-  
-  <div id="engines-panel" class="panel">
-    <div class="section-title">翻译引擎</div>
-    <div class="preset-tags">
-      <span class="preset-tag active" data-preset="openai">OpenAI</span>
-      <span class="preset-tag" data-preset="deepseek">DeepSeek</span>
-      <span class="preset-tag" data-preset="aliyun">阿里云</span>
-      <span class="preset-tag" data-preset="ollama">Ollama</span>
-      <span class="preset-tag" data-preset="custom">自定义</span>
-    </div>
-    <div class="form-group" style="margin-top: 14px;">
-      <label>API Base URL</label>
-      <input type="text" id="api-base" placeholder="https://api.openai.com/v1">
-    </div>
-    <div class="form-group">
-      <label>API Key</label>
-      <input type="password" id="api-key" placeholder="sk-...">
-    </div>
-    <div class="form-group">
-      <label>模型名称</label>
-      <input type="text" id="model-name" placeholder="gpt-4o-mini">
-    </div>
-    <div class="form-group">
-      <label>温度 (Temperature)</label>
-      <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.3">
-    </div>
-    <div class="form-group">
-      <label>系统提示词</label>
-      <textarea id="system-prompt" placeholder="你是一个专业翻译助手...">你是一个专业翻译助手。将用户输入的文本翻译成目标语言，保持原文的语气和风格。只输出翻译结果，不添加解释。</textarea>
-    </div>
-    <div style="display: flex; gap: 8px; margin-top: 12px;">
-      <button class="btn btn-primary" id="save-engine">保存引擎</button>
-      <button class="btn btn-secondary" id="test-engine">测试连接</button>
-    </div>
-    <div class="test-result" id="test-result"></div>
-    <div class="section-title" style="margin-top: 20px;">已保存引擎</div>
-    <div class="engine-list" id="engine-list"></div>
-  </div>
-  
-  <div id="advanced-panel" class="panel">
-    <div class="section-title">术语库</div>
-    <div id="glossary-list"></div>
-    <div class="glossary-row" style="margin-top: 8px;">
-      <input type="text" id="glossary-key" placeholder="原文术语">
-      <input type="text" id="glossary-val" placeholder="翻译">
-      <button class="icon-btn" id="add-glossary">+</button>
-    </div>
-    
-    <div class="section-title" style="margin-top: 16px;">AI 翻译专家</div>
-    <div id="expert-list"></div>
-    
-    <div class="section-title" style="margin-top: 16px;">显示设置</div>
-    <div class="form-group">
-      <label>翻译字体大小</label>
-      <input type="range" id="font-size" min="12" max="20" value="14" style="width: 100%;">
-    </div>
-    <div class="form-group">
-      <label>翻译颜色</label>
-      <input type="color" id="trans-color" value="#667eea" style="width: 100%; height: 36px;">
-    </div>
-    <div class="toggle-row">
-      <span>显示原文</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="show-original" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="toggle-row">
-      <span>自动检测语言</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="auto-detect" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="toggle-row">
-      <span>缓存翻译结果</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="enable-cache" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="toggle-row">
-      <span>发音功能</span>
-      <label class="toggle-switch">
-        <input type="checkbox" id="pronounce-enabled">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="form-group">
-      <label>并行请求数</label>
-      <input type="number" id="max-concurrent" min="1" max="10" value="3">
-    </div>
-    <div class="form-group">
-      <label>悬停快捷键</label>
-      <select id="hover-modifier">
-        <option value="ctrl">Ctrl</option>
-        <option value="alt">Alt</option>
-        <option value="shift">Shift</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>输入框触发方式</label>
-      <select id="input-trigger">
-        <option value="triple-space">连按 3 次空格</option>
-        <option value="double-space">连按 2 次空格</option>
-      </select>
-    </div>
-    <button class="btn btn-primary" id="save-advanced" style="margin-top: 12px;">保存高级设置</button>
-  </div>
-  
-  <div id="logs-panel" class="panel">
-    <div class="section-title">运行日志</div>
-    <div class="logs-area" id="logs-area"></div>
-    <button class="btn btn-secondary" id="clear-logs" style="margin-top: 10px;">清除日志</button>
-    <button class="btn btn-secondary" id="clear-cache" style="margin-top: 8px;">清除翻译缓存</button>
-  </div>
-  
-  <div class="status-bar">
     <div class="status-indicator">
       <div class="status-dot" id="status-dot"></div>
       <span id="status-text">就绪</span>
     </div>
-    <span id="version">v1.0.0</span>
+  </div>
+  
+  <div class="tabs">
+    <div class="tab active" data-panel="translate">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      翻译
+    </div>
+    <div class="tab" data-panel="engines">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      引擎
+    </div>
+    <div class="tab" data-panel="advanced">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      高级
+    </div>
+    <div class="tab" data-panel="logs">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      日志
+    </div>
+  </div>
+  
+  <!-- Translate Panel -->
+  <div class="panel active" id="translate-panel">
+    <div class="section">
+      <div class="section-title">快速操作</div>
+      <div class="quick-actions">
+        <a class="quick-action" href="pdf-viewer.html" target="_blank">
+          <div class="icon">📄</div>
+          <div class="label">PDF 翻译</div>
+        </a>
+        <a class="quick-action" href="epub-viewer.html" target="_blank">
+          <div class="icon">📖</div>
+          <div class="label">ePub 翻译</div>
+        </a>
+        <a class="quick-action" href="img-viewer.html" target="_blank">
+          <div class="icon">🖼️</div>
+          <div class="label">图片翻译</div>
+        </a>
+        <div class="quick-action" id="btn-translate-page">
+          <div class="icon">🌐</div>
+          <div class="label">翻译当前页</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">翻译设置</div>
+      <div class="row">
+        <div>
+          <div class="row-label">自动翻译网页</div>
+          <div class="row-hint">打开页面时自动翻译</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="enable-translate"></label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-label">划词翻译</div>
+          <div class="row-hint">选中文本后弹出翻译</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="selection-translate"></label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-label">输入框翻译</div>
+          <div class="row-hint">连按空格触发翻译</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="input-translate"></label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="row-label">悬停翻译</div>
+          <div class="row-hint">Ctrl/Alt 悬停段落翻译</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="hover-translate"></label>
+      </div>
+      <div class="row">
+        <div class="row-label">目标语言</div>
+        <select id="target-lang">
+          <option value="zh-CN">中文（简体）</option>
+          <option value="zh-TW">中文（繁体）</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="es">Español</option>
+          <option value="ru">Русский</option>
+          <option value="pt">Português</option>
+          <option value="it">Italiano</option>
+          <option value="vi">Tiếng Việt</option>
+          <option value="th">ไทย</option>
+          <option value="ar">العربية</option>
+          <option value="hi">हिन्दी</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">翻译样式</div>
+      <div class="style-grid" id="style-grid">
+        <div class="style-card active" data-style="bilingual-inline">
+          <div style="font-weight: 600;">行内双语</div>
+          <div class="preview">原文 <span style="color: #667eea;">译文</span></div>
+        </div>
+        <div class="style-card" data-style="bilingual-block">
+          <div style="font-weight: 600;">段落双语</div>
+          <div class="preview">原文<br/><span style="color: #667eea;">译文</span></div>
+        </div>
+        <div class="style-card" data-style="pure-translation">
+          <div style="font-weight: 600;">纯译文</div>
+          <div class="preview">仅显示译文</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-label">显示原文</div>
+        <label class="toggle"><input type="checkbox" id="show-original" checked></label>
+      </div>
+      <div class="row">
+        <div class="row-label">翻译颜色</div>
+        <input type="color" id="trans-color" value="#667eea">
+      </div>
+      <div class="row">
+        <div class="row-label">字体大小</div>
+        <div style="display: flex; align-items: center; gap: 10px; width: 60%;">
+          <input type="range" id="font-size" min="10" max="24" value="14" style="flex: 1;">
+          <span class="range-value" id="font-size-value">14</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Engines Panel -->
+  <div class="panel" id="engines-panel">
+    <div class="section">
+      <div class="section-title">当前引擎</div>
+      <div id="engine-list"></div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">添加引擎</div>
+      <div class="preset-row" id="preset-row">
+        <div class="preset-tag active" data-preset="openai">OpenAI</div>
+        <div class="preset-tag" data-preset="deepseek">DeepSeek</div>
+        <div class="preset-tag" data-preset="aliyun">阿里云</div>
+        <div class="preset-tag" data-preset="ollama">Ollama</div>
+        <div class="preset-tag" data-preset="custom">自定义</div>
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div class="row-label" style="margin-bottom: 4px;">API Base URL</div>
+        <input type="text" id="api-base" placeholder="https://api.openai.com/v1">
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div class="row-label" style="margin-bottom: 4px;">API Key</div>
+        <input type="password" id="api-key" placeholder="sk-...">
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div class="row-label" style="margin-bottom: 4px;">模型名称</div>
+        <input type="text" id="model-name" placeholder="gpt-4o-mini">
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div class="row-label" style="margin-bottom: 4px;">Temperature</div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.3" style="flex: 1;">
+          <span class="range-value" id="temp-value">0.3</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button class="btn btn-secondary btn-sm" id="test-engine">测试连接</button>
+        <button class="btn btn-primary btn-sm" id="save-engine">保存引擎</button>
+      </div>
+      <div class="test-result" id="test-result"></div>
+    </div>
+  </div>
+  
+  <!-- Advanced Panel -->
+  <div class="panel" id="advanced-panel">
+    <div class="section">
+      <div class="section-title">高级设置</div>
+      <div class="row">
+        <div class="row-label">悬停修饰键</div>
+        <select id="hover-modifier">
+          <option value="ctrl">Ctrl</option>
+          <option value="alt">Alt</option>
+          <option value="shift">Shift</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="row-label">输入框触发</div>
+        <select id="input-trigger">
+          <option value="triple-space">连按 3 次空格</option>
+          <option value="double-space">连按 2 次空格</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="row-label">最大并发数</div>
+        <div style="display: flex; align-items: center; gap: 10px; width: 50%;">
+          <input type="range" id="max-concurrent" min="1" max="10" value="3" style="flex: 1;">
+          <span class="range-value" id="concurrent-value">3</span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-label">启用翻译缓存</div>
+        <label class="toggle"><input type="checkbox" id="enable-cache" checked></label>
+      </div>
+      <div class="row">
+        <div class="row-label">显示发音按钮</div>
+        <label class="toggle"><input type="checkbox" id="pronounce-enabled"></label>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">AI 翻译专家</div>
+      <div class="expert-grid" id="expert-grid">
+        <div class="expert-card active" data-expert="general">
+          <h4>📝 通用</h4>
+          <p>日常翻译</p>
+        </div>
+        <div class="expert-card" data-expert="tech">
+          <h4>💻 技术</h4>
+          <p>IT/软件文档</p>
+        </div>
+        <div class="expert-card" data-expert="medical">
+          <h4>🏥 医学</h4>
+          <p>医学论文</p>
+        </div>
+        <div class="expert-card" data-expert="legal">
+          <h4>⚖️ 法律</h4>
+          <p>合同/法律</p>
+        </div>
+        <div class="expert-card" data-expert="literary">
+          <h4>📚 文学</h4>
+          <p>小说/诗歌</p>
+        </div>
+        <div class="expert-card" data-expert="academic">
+          <h4>🎓 学术</h4>
+          <p>学术论文</p>
+        </div>
+        <div class="expert-card" data-expert="business">
+          <h4>💼 商务</h4>
+          <p>商务邮件</p>
+        </div>
+        <div class="expert-card" data-expert="subtitles">
+          <h4>🎬 字幕</h4>
+          <p>视频字幕</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">术语库</div>
+      <div id="glossary-list"></div>
+      <div class="glossary-row" style="margin-top: 8px;">
+        <input type="text" id="glossary-key" placeholder="原文术语">
+        <input type="text" id="glossary-val" placeholder="翻译术语">
+        <button class="btn btn-primary btn-sm" id="add-glossary">+</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="clear-cache">清除缓存</button>
+        <button class="btn btn-secondary btn-sm" id="save-advanced">保存设置</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Logs Panel -->
+  <div class="panel" id="logs-panel">
+    <div class="section">
+      <div class="section-title">运行日志</div>
+      <div class="logs-area" id="logs-area"></div>
+      <div style="margin-top: 8px; display: flex; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="clear-logs">清除日志</button>
+        <button class="btn btn-secondary btn-sm" id="refresh-logs">刷新</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <span>Alt+T 翻译 | Alt+S 划词</span>
+    <a href="https://github.com/cocoyoi/immersive-translator" target="_blank">GitHub</a>
   </div>
   
   <script src="popup.js"></script>
