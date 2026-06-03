@@ -1,0 +1,34 @@
+/* content.css - YaYacal Translation Styles */
+
+.yayacal-translated-wrapper {
+  display: inline !important;
+  animation: yayacal-fade-in 0.3s ease;
+}
+
+@keyframes yayacal-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.yayacal-translation {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif !important;
+  line-height: 1.5 !important;
+}
+
+.yayacal-original {
+  font-family: inherit !important;
+}
+
+#yayacal-popup {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  line-height: 1.5 !important;
+}
+
+#yayacal-popup::-webkit-scrollbar {
+  width: 6px;
+}
+
+#yayacal-popup::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 3px;
+}

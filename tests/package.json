@@ -1,0 +1,16 @@
+{
+  "name": "yayacal-translation-tests",
+  "version": "1.0.0",
+  "description": "Test suite for YaYacal Translation",
+  "scripts": {
+    "test": "node background.test.js && node content.test.js",
+    "test:background": "node background.test.js",
+    "test:content": "node content.test.js",
+    "lint": "echo 'Linting...'",
+    "build": "echo 'Building extension...'",
+    "package": "zip -r yayacal-translation.zip manifest.json popup.html popup.js content.js content.css background.js icons/ README.md"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}
