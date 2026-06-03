@@ -40,7 +40,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["injected.js"],
+      "resources": ["injected.js", "pdf-viewer.html", "epub-viewer.html", "img-viewer.html", "lib/*"],
       "matches": ["<all_urls>"]
     }
   ]

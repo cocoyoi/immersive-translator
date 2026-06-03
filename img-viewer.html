@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>图片翻译 - immersive-translator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+    .header { padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: center; }
+    .header h1 { font-size: 24px; font-weight: 600; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .drop-zone { border: 2px dashed #667eea; border-radius: 12px; padding: 60px 20px; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
+    .drop-zone:hover { background: rgba(102,126,234,0.1); }
+    .drop-zone input { display: none; }
+    .image-container { display: flex; gap: 20px; margin-top: 20px; }
+    .image-panel { flex: 1; background: #16213e; border-radius: 8px; padding: 16px; }
+    .image-panel h3 { font-size: 14px; margin-bottom: 12px; color: #667eea; }
+    .image-panel img { max-width: 100%; border-radius: 4px; }
+    .translated-text { font-size: 14px; line-height: 1.6; color: #eee; }
+    .translated-text p { margin-bottom: 8px; }
+    .controls { display: flex; gap: 10px; margin: 20px 0; }
+    .controls button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+    .btn-secondary { background: #16213e; color: #eee; border: 1px solid #444; }
+    .status { padding: 10px 16px; background: #16213e; border-radius: 6px; margin-bottom: 20px; font-size: 13px; display: none; }
+    .status.info { border-left: 3px solid #667eea; display: block; }
+    .status.success { border-left: 3px solid #28a745; display: block; }
+    .status.error { border-left: 3px solid #dc3545; display: block; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🖼️ 图片翻译</h1>
+    <p>上传图片，OCR 提取文字并翻译</p>
+  </div>
+  <div class="container">
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*">
+      <h2>拖放图片到此处</h2>
+      <p>支持 JPG、PNG、WebP、GIF</p>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="controls" id="controls" style="display: none;">
+      <button class="btn-primary" id="btn-translate">OCR + 翻译</button>
+      <button class="btn-secondary" id="btn-clear">清除</button>
+    </div>
+    <div class="image-container" id="image-container" style="display: none;">
+      <div class="image-panel">
+        <h3>原图</h3>
+        <img id="original-img" src="" alt="原图">
+      </div>
+      <div class="image-panel">
+        <h3>翻译结果</h3>
+        <div class="translated-text" id="translated-text"></div>
+      </div>
+    </div>
+  </div>
+  <script src="img-translator.js"></script>
+</body>
+</html>

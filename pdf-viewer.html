@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PDF 翻译 - immersive-translator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+    .header { padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); text-align: center; }
+    .header h1 { font-size: 24px; font-weight: 600; }
+    .header p { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .drop-zone {
+      border: 2px dashed #667eea; border-radius: 12px; padding: 60px 20px;
+      text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px;
+    }
+    .drop-zone:hover, .drop-zone.dragover { background: rgba(102,126,234,0.1); border-color: #764ba2; }
+    .drop-zone h2 { font-size: 18px; margin-bottom: 10px; color: #667eea; }
+    .drop-zone p { font-size: 14px; color: #888; }
+    .drop-zone input { display: none; }
+    .progress-bar { width: 100%; height: 6px; background: #333; border-radius: 3px; margin: 20px 0; overflow: hidden; display: none; }
+    .progress-bar .fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; transition: width 0.3s; }
+    .pdf-container { display: flex; gap: 20px; }
+    .pdf-pages { flex: 1; max-height: 80vh; overflow-y: auto; }
+    .page { background: #fff; color: #333; margin-bottom: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .page-header { padding: 10px 16px; background: #f5f5f5; border-bottom: 1px solid #ddd; font-size: 13px; color: #666; display: flex; justify-content: space-between; }
+    .page-content { display: flex; }
+    .page-original { flex: 1; padding: 20px; border-right: 1px solid #eee; font-size: 14px; line-height: 1.6; }
+    .page-translated { flex: 1; padding: 20px; font-size: 14px; line-height: 1.6; color: #333; }
+    .page-translated p { margin-bottom: 12px; }
+    .page-translated .translated-text { color: #667eea; }
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .controls button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: #16213e; color: #eee; border: 1px solid #444; }
+    .btn-secondary:hover { background: #1f2b47; }
+    .status { padding: 10px 16px; background: #16213e; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
+    .status.success { border-left: 3px solid #28a745; }
+    .status.error { border-left: 3px solid #dc3545; }
+    .status.info { border-left: 3px solid #667eea; }
+    @media (max-width: 768px) {
+      .page-content { flex-direction: column; }
+      .page-original { border-right: none; border-bottom: 1px solid #eee; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📄 PDF 翻译</h1>
+    <p>上传 PDF 文件，获取双语对照翻译</p>
+  </div>
+  
+  <div class="container">
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".pdf">
+      <h2>拖放 PDF 文件到此处</h2>
+      <p>或点击选择文件，支持 PDF 扫描件（OCR）</p>
+    </div>
+    
+    <div class="progress-bar" id="progress-bar">
+      <div class="fill" id="progress-fill"></div>
+    </div>
+    
+    <div class="controls" id="controls" style="display: none;">
+      <button class="btn-primary" id="btn-translate">开始翻译</button>
+      <button class="btn-secondary" id="btn-download">下载翻译结果</button>
+      <button class="btn-secondary" id="btn-clear">清除</button>
+    </div>
+    
+    <div class="status" id="status" style="display: none;"></div>
+    
+    <div class="pdf-container" id="pdf-container" style="display: none;">
+      <div class="pdf-pages" id="pdf-pages"></div>
+    </div>
+  </div>
+  
+  <script src="lib/pdf.min.js"></script>
+  <script src="pdf-viewer.js"></script>
+</body>
+</html>
