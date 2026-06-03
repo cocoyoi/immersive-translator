@@ -1,8 +1,8 @@
-# YaYacal Translation
+# immersive-translator
 
-企业级沉浸式翻译 Chrome 扩展，支持自定义模型接入。
+沉浸式翻译 Chrome 扩展，支持自定义模型接入。
 
-## 功能
+对标: https://immersivetranslate.com/
 
 - **网页双语对照翻译** — 自动翻译页面内容，保留原文对照
 - **划词翻译** — 选中文字即时翻译

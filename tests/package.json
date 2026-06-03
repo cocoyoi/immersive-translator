@@ -1,7 +1,7 @@
 {
-  "name": "yayacal-translation-tests",
+  "name": "immersive-translator",
   "version": "1.0.0",
-  "description": "Test suite for YaYacal Translation",
+  "description": "Test suite for immersive-translator",
   "scripts": {
     "test": "node background.test.js && node content.test.js",
     "test:background": "node background.test.js",
