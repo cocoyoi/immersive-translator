@@ -26,7 +26,7 @@
     "collectCoverage": true,
     "coverageDirectory": "coverage",
     "coverageReporters": ["text", "html", "lcov"],
-    "collectCoverageFrom": ["*.js", "!lib/**", "!coverage/**"],
+    "collectCoverageFrom": ["../*.js", "!../lib/**", "!../tests/coverage/**", "!**/node_modules/**"],
     "testMatch": ["**/tests/**/*.test.js"],
     "setupFilesAfterEnv": ["<rootDir>/setup.js"],
     "moduleNameMapper": {

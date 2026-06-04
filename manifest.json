@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "immersive-translator",
-  "version": "1.0.0",
-  "description": "沉浸式翻译，支持自定义模型接入",
+  "version": "1.1.0",
+  "description": "沉浸式翻译，双语对照网页翻译、PDF/EPUB/图片翻译、视频字幕翻译、多引擎自动降级",
   "permissions": [
     "activeTab",
     "storage",
@@ -27,7 +27,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["engines.js", "content-detector.js", "site-patches.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_end",
       "all_frames": true
@@ -40,7 +40,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["injected.js", "pdf-viewer.html", "epub-viewer.html", "img-viewer.html", "lib/*"],
+      "resources": ["injected.js", "pdf-viewer.html", "epub-viewer.html", "img-viewer.html", "document-translator.html", "lib/*", "engines.js"],
       "matches": ["<all_urls>"]
     }
   ]

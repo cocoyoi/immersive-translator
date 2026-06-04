@@ -99,51 +99,57 @@
       return translationCache.get(cacheKey);
     }
 
-    const engine = await getActiveEngine();
-    if (!engine) throw new Error('未配置翻译引擎，请先在设置中配置 API');
-    
-    if (!engine.base || !engine.key || !engine.model) {
-      throw new Error('引擎配置不完整，请检查 API Base URL、API Key 和模型名称');
+    // Use engines.js multi-engine translation with fallback
+    let result;
+    if (typeof translateWithFallback === 'function') {
+      const engineResult = await translateWithFallback(text, targetLang, settings);
+      result = engineResult.text;
+      // Optional: show engine tag if fallback occurred
+      if (engineResult.fallback && typeof showToast === 'function') {
+        showToast(`已降级至 ${engineResult.engine} 引擎`);
+      }
+    } else {
+      // Legacy fallback: direct OpenAI-compatible API call
+      const engine = await getActiveEngine();
+      if (!engine) throw new Error('未配置翻译引擎，请先在设置中配置 API');
+      if (!engine.base || !engine.key || !engine.model) {
+        throw new Error('引擎配置不完整，请检查 API Base URL、API Key 和模型名称');
+      }
+      const prompts = buildPrompt(text, targetLang, settings.glossary);
+      const url = engine.base + '/chat/completions';
+      const body = {
+        model: engine.model,
+        messages: [
+          { role: 'system', content: prompts.system },
+          { role: 'user', content: prompts.user }
+        ],
+        temperature: engine.temp || 0.3,
+        max_tokens: Math.max(100, text.length * 2)
+      };
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + engine.key
+        },
+        body: JSON.stringify(body)
+      });
+      if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error('API 错误 ' + resp.status + ': ' + err);
+      }
+      const data = await resp.json();
+      result = data.choices?.[0]?.message?.content?.trim() || text;
     }
-
-    const prompts = buildPrompt(text, targetLang, settings.glossary);
-    
-    const url = engine.base + '/chat/completions';
-    const body = {
-      model: engine.model,
-      messages: [
-        { role: 'system', content: prompts.system },
-        { role: 'user', content: prompts.user }
-      ],
-      temperature: engine.temp || 0.3,
-      max_tokens: Math.max(100, text.length * 2)
-    };
-
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + engine.key
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error('API 错误 ' + resp.status + ': ' + err);
-    }
-
-    const data = await resp.json();
-    const translated = data.choices?.[0]?.message?.content?.trim() || text;
     
     if (settings.enableCache) {
       if (translationCache.size >= MAX_CACHE_SIZE) {
         const firstKey = translationCache.keys().next().value;
         translationCache.delete(firstKey);
       }
-      translationCache.set(cacheKey, translated);
+      translationCache.set(cacheKey, result);
     }
-    return translated;
+    return result;
   }
 
   // ==== Translation Styles ====
@@ -224,6 +230,8 @@
           const parent = node.parentElement;
           if (!parent) return NodeFilter.FILTER_REJECT;
           if (BLOCK_TAGS.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+          // Skip elements marked by site patches
+          if (parent.closest('[data-it-skip="true"]')) return NodeFilter.FILTER_REJECT;
           if (parent.closest('.it-bilingual-inline') || parent.closest('.it-bilingual-block') || parent.closest('.it-pure-trans')) return NodeFilter.FILTER_REJECT;
           const text = node.textContent.trim();
           if (text.length < MIN_TEXT_LENGTH) return NodeFilter.FILTER_REJECT;
@@ -274,10 +282,25 @@
     if (isTranslating) return;
     isTranslating = true;
     
-    showToast('正在翻译页面...');
-
+    showToast('正在分析页面内容...');
     await loadSettings();
-    const nodes = getTextBlocks(document.body);
+
+    // Apply site-specific patches first
+    if (typeof SitePatches !== 'undefined') {
+      SitePatches.apply(window.location.hostname);
+    }
+
+    // Use smart content detection
+    let targetElement = document.body;
+    let detectionMethod = 'fallback';
+    if (typeof ContentDetector !== 'undefined') {
+      const detected = ContentDetector.detect(window.location.hostname);
+      targetElement = detected.element;
+      detectionMethod = detected.method;
+      showToast(`内容识别: ${detectionMethod} 模式，正在翻译...`);
+    }
+
+    const nodes = getTextBlocks(targetElement);
     if (nodes.length === 0) {
       isTranslating = false;
       showToast('页面上没有可翻译的文本');
@@ -286,7 +309,7 @@
 
     await translateBatch(nodes);
     isTranslating = false;
-    showToast('翻译完成！' + nodes.length + ' 个文本块已翻译');
+    showToast(`翻译完成！${nodes.length} 个文本块已翻译 (${detectionMethod})`);
     startObserver();
   }
 
