@@ -535,11 +535,49 @@
       sendResponse({ success: true });
       return true;
     }
+    if (request.action === 'toggleSpeechTranslate') {
+      if (typeof SpeechTranslator !== 'undefined') {
+        const state = SpeechTranslator.toggle();
+        sendResponse({ success: true, listening: state });
+      } else {
+        sendResponse({ success: false, error: 'Speech translator not available' });
+      }
+      return true;
+    }
+    if (request.action === 'toggleMeetingTranslate') {
+      if (typeof MeetingTranslator !== 'undefined') {
+        MeetingTranslator.toggle(request.enable);
+        sendResponse({ success: true, enabled: request.enable });
+      } else {
+        sendResponse({ success: false, error: 'Meeting translator not available' });
+      }
+      return true;
+    }
+    if (request.action === 'openMangaTranslator') {
+      if (typeof MangaTranslator !== 'undefined' && request.file) {
+        MangaTranslator.open(request.file).then(() => sendResponse({ success: true })).catch(e => sendResponse({ success: false, error: e.message }));
+        return true;
+      }
+      sendResponse({ success: false, error: 'Manga translator not available or no file provided' });
+      return true;
+    }
   });
 
   // ==== Initialize ====
   async function init() {
     await loadSettings();
+
+    // Apply custom CSS
+    if (typeof CustomCSS !== 'undefined') {
+      CustomCSS.apply(window.location.hostname);
+    }
+
+    // Initialize meeting translator if on supported platform
+    if (typeof MeetingTranslator !== 'undefined') {
+      MeetingTranslator.init(settings);
+    }
+
+    // Auto-start page translation if enabled
     if (translationEnabled) {
       translatePage();
       startObserver();

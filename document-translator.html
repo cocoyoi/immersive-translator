@@ -138,7 +138,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/></svg>
       <h3>拖拽文件到此处，或点击上传</h3>
       <p>支持 PDF、EPUB、HTML、TXT、Markdown、SRT 字幕</p>
-      <input type="file" id="fileInput" accept=".pdf,.epub,.html,.htm,.txt,.md,.srt">
+      <input type="file" id="fileInput" accept=".pdf,.epub,.html,.htm,.txt,.md,.srt,.cbz,.cbr">
     </div>
 
     <div class="settings">
@@ -251,7 +251,7 @@
 
   function handleFile(file) {
     const supported = ['application/pdf', 'application/epub+zip', 'text/html', 'text/plain', 'text/markdown', 'text/x-markdown', 'application/x-subrip'];
-    const byExt = ['.pdf', '.epub', '.html', '.htm', '.txt', '.md', '.srt'];
+    const byExt = ['.pdf', '.epub', '.html', '.htm', '.txt', '.md', '.srt', '.cbz', '.cbr'];
     const extOk = byExt.some(ext => file.name.toLowerCase().endsWith(ext));
     if (!extOk && !supported.includes(file.type)) {
       alert('不支持的文件格式。请上传 PDF、EPUB、HTML、TXT、Markdown 或 SRT 文件。');
@@ -279,6 +279,22 @@
     const targetLang = document.getElementById('targetLang').value;
     const displayMode = document.getElementById('displayMode').value;
     const engine = engineSelect.value;
+
+    // Comic file handling
+    const lowerName = currentFile.name.toLowerCase();
+    if (lowerName.endsWith('.cbz') || lowerName.endsWith('.cbr') || lowerName.endsWith('.zip')) {
+      statusEl.innerHTML = '📖 检测到漫画文件，正在加载漫画翻译器...';
+      try {
+        await loadScript('manga-translator.js');
+        await window.MangaTranslator.open(currentFile);
+        statusEl.innerHTML = '✅ 漫画翻译器已打开';
+      } catch (e) {
+        statusEl.innerHTML = '❌ 漫画翻译失败: ' + e.message;
+      }
+      translateBtn.disabled = false;
+      return;
+    }
+
     statusEl.innerHTML = '正在解析文件...';
 
     try {
@@ -389,6 +405,16 @@
         viewerBody.appendChild(p);
       }
     }
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
   }
 
   function escapeHtml(text) {

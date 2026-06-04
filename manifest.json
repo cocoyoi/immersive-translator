@@ -27,7 +27,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["engines.js", "content-detector.js", "site-patches.js", "content.js"],
+      "js": ["engines.js", "content-detector.js", "site-patches.js", "custom-css.js", "meeting-translator.js", "speech-translator.js", "manga-translator.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_end",
       "all_frames": true
@@ -40,7 +40,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["injected.js", "pdf-viewer.html", "epub-viewer.html", "img-viewer.html", "document-translator.html", "lib/*", "engines.js"],
+      "resources": ["injected.js", "pdf-viewer.html", "epub-viewer.html", "img-viewer.html", "document-translator.html", "lib/*", "engines.js", "manga-translator.js"],
       "matches": ["<all_urls>"]
     }
   ]

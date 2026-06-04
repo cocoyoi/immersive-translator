@@ -428,6 +428,24 @@ function init() {
   document.getElementById('refresh-logs')?.addEventListener('click', loadLogs);
   document.getElementById('clear-cache')?.addEventListener('click', clearCache);
   document.getElementById('btn-translate-page')?.addEventListener('click', translateCurrentPage);
+  document.getElementById('btn-document-translator')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('document-translator.html') });
+    window.close();
+  });
+  document.getElementById('btn-manga-translator')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('document-translator.html') });
+    window.close();
+  });
+  document.getElementById('btn-speech-translate')?.addEventListener('click', async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) chrome.tabs.sendMessage(tab.id, { action: 'toggleSpeechTranslate' });
+    window.close();
+  });
+  document.getElementById('btn-meeting-translate')?.addEventListener('click', async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) chrome.tabs.sendMessage(tab.id, { action: 'toggleMeetingTranslate', enable: true });
+    window.close();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
