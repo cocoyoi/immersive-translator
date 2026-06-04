@@ -14,7 +14,7 @@
     "test:yt": "jest tests/youtube.test.js",
     "lint": "eslint *.js",
     "build": "echo 'Building extension...'",
-    "package": "zip -r immersive-translator.zip manifest.json popup.html popup.js content.js content.css background.js youtube-translator.js netflix-translator.js pdf-viewer.html pdf-viewer.js epub-viewer.html epub-translator.js img-viewer.html img-translator.js lib/ icons/ README.md"
+    "package": "cd .. && zip -r tests/immersive-translator.zip manifest.json popup.html popup.js engines.js content.js content.css content-detector.js site-patches.js custom-css.js background.js meeting-translator.js speech-translator.js manga-translator.js youtube-translator.js netflix-translator.js pdf-viewer.html pdf-viewer.js epub-viewer.html epub-translator.js img-viewer.html img-translator.js document-translator.html lib/ icons/ README.md"
   },
   "devDependencies": {
     "jest": "^29.7.0",

@@ -53,4 +53,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: immersive-translator-extension
-          path: immersive-translator.zip
+          path: tests/immersive-translator.zip
